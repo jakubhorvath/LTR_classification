@@ -1,0 +1,25 @@
+# sweep.yaml
+program: keras_tunesweep.py
+method: random
+metric:
+  name: binary_crossentropy
+  goal: minimize
+parameters:
+  filters:
+    values: [32, 64, 128]
+  kernel_size:
+    values: [8, 16, 32]
+  dropout_rate:
+    values: [0.2, 0.3, 0.4]
+  pool_size:
+    values: [2, 4, 8]
+  lstm_units:
+    values: [50, 100, 150]
+  dense_units:
+    values: [64, 128, 256]
+early_terminate:
+  type: hyperband
+  s: 2
+  eta: 3
+  max_iter: 27
+
