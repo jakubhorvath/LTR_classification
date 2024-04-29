@@ -14,10 +14,17 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from sklearn.ensemble import RandomForestClassifier
 from utils.TFBS_utils import get_presence_count_dict
+import argparse 
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--input_features', help='Path to input features file')
+parser.add_argument('--seq_file', help='Path to sequence file')
+parser.add_argument('--out_path', help='Path to output file')
+args = parser.parse_args()
 
 # Load the detected motifs
-motifs = pickle.load(open("/var/tmp/xhorvat9/ltr_bert/Simple_ML_model/training_LTR_TFBS.b", "rb"))
-#motifs = pickle.load(open("/var/tmp/xhorvat9/ltr_bert/Simple_ML_model/sequence_motifs_sampled.b", "rb"))
+motifs = pickle.load(open(args.input_features, "rb"))
 
 # Create a dictionary to store the motif count and presence
 LTR_motif_dict_count = dict([(key, []) for key in motifs[list(motifs.keys())[0]]])
@@ -29,7 +36,7 @@ IDs = list(motifs.keys())
 dt = pd.DataFrame(LTR_motif_dict_count, index=IDs)
 
 # Load the superfamilies
-records = [rec for rec in SeqIO.parse("/var/tmp/xhorvat9/ltr_bert/FASTA_files/train_LTRs.fasta", "fasta")]
+records = [rec for rec in SeqIO.parse(args.seq_file, "fasta")]
 superfamilies = [rec.description.split()[3] for rec in records]
 IDs = [rec.id for rec in records]
 superfam_df = pd.DataFrame({ "superfamily": superfamilies}, index=IDs)
@@ -55,4 +62,4 @@ grid = tfidf_pipeline.fit(X_train, y_train)
 print("F1 Score ", f1_score(y_test, tfidf_pipeline.predict(X_test)))
 
 import pickle
-pickle.dump(tfidf_pipeline, open("GBC_pipeline.b", "wb+"))
+pickle.dump(tfidf_pipeline, open(args.out_path, "wb+"))

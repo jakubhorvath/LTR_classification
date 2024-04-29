@@ -3,11 +3,19 @@ import pandas as pd
 import Bio.SeqIO as SeqIO
 from sklearn.preprocessing import LabelEncoder
 import shap 
+import argparse 
 
-pipeline = pickle.load(open('/data/xhorvat9/ltr_bert/NewClassifiers/Superfamily/TFBS/GBC_pipeline.b', 'rb'))
+parser = argparse.ArgumentParser()
+parser.add_argument('--pipeline_path', help='Path to the model')
+parser.add_argument('--input_features', help='Path to input features file')
+parser.add_argument('--seq_file', help='Path to sequence file')
+parser.add_argument('--out_path', help='Path to output file')
+args = parser.parse_args()
+
+pipeline = pickle.load(open(args.pipeline_path, 'rb'))
 TFIDF_transformer = pipeline["transformer"]
 GBC = pipeline["classifier"]
-test_features = pickle.load(open("/data/xhorvat9/ltr_bert/Simple_ML_model/test_LTR_TFBS_old638.b", "rb"))
+test_features = pickle.load(open(args.input_features, "rb"))
 
 def get_presence_count_dict(motif_dict_count, motif_dict_presence, TF_sites):
     for seq in TF_sites:
@@ -29,7 +37,7 @@ IDs = list(test_features.keys())
 dt = pd.DataFrame(LTR_motif_dict_count, index=IDs)
 
 # Assign superfamily labels to the LTRs
-records = [rec for rec in SeqIO.parse("/data/xhorvat9/ltr_bert/FASTA_files/test_LTRs.fasta", "fasta")]
+records = [rec for rec in SeqIO.parse(args.seq_file, "fasta")]
 superfamilies = [rec.description.split()[3] for rec in records]
 IDs = [rec.id for rec in records]
 superfam_df = pd.DataFrame({ "superfamily": superfamilies}, index=IDs)
@@ -47,4 +55,4 @@ data = data.iloc[:, :-1]
 explainer = shap.TreeExplainer(GBC)
 shap_values = explainer.shap_values(data)
 
-pickle.dump(shap_values, open("shap_values.b", "wb+"))
+pickle.dump(shap_values, open(args.out_path, "wb+"))

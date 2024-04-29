@@ -16,9 +16,14 @@ from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 import wandb
 from wandb.keras import WandbCallback
 from utils.CNN_utils import remove_N, onehote
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--seq_file', help='Path to sequence file')
+args = parser.parse_args()
 
 max_len=600
-sequences  = [rec for rec in SeqIO.parse("/var/tmp/xhorvat9/ltr_bert/FASTA_files/train_LTRs.fasta", "fasta") if len(rec.seq) < max_len and len(rec.seq) > 0 and rec.description.split()[3] != "NAN"]
+sequences  = [rec for rec in SeqIO.parse(args.seq_file, "fasta") if len(rec.seq) < max_len and len(rec.seq) > 0 and rec.description.split()[3] != "NAN"]
 
 labels = [rec.description.split()[3] for rec in sequences]
 le = LabelEncoder()
@@ -62,7 +67,7 @@ sweep_config = {
         }
     }
 }
-sweep_id = wandb.sweep(sweep_config, entity="diplomovka", project="Superfamily_KT_sweep_short")
+sweep_id = wandb.sweep(sweep_config, entity="project", project="Superfamily_KT_sweep_short")
 ######### Begin Training #########
 def train():
     # Default values for hyper-parameters we're going to sweep over
@@ -89,8 +94,6 @@ def train():
     model2.add(Dense(units=1, activation='sigmoid'))
 
     model2.compile(loss='binary_crossentropy', optimizer=config.optimizer, metrics=['binary_accuracy'], weighted_metrics=["binary_accuracy"])
-
-    #model2.fit(valX, np.array(valY), epochs=3, batch_size=64,verbose = 1,validation_data=(valX, np.array(valY)), callbacks=[WandbCallback()])
     model2.fit(trainX, np.array(trainY), epochs=15, batch_size=64,verbose = 1,validation_data=(valX, np.array(valY)), callbacks=[EarlyStopping(monitor='val_loss', patience=3), WandbCallback(validation_data=(valX, valY))], class_weight=weights)
 
 wandb.agent(sweep_id, train)

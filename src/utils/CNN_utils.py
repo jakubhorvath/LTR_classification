@@ -51,10 +51,10 @@ def normalize_pwm(pwm, factor=3, max=None):
     np.array
         Normalized PWM
     """
-	if not max:
-		max = np.max(np.abs(pwm))
-	pwm = pwm/max
-	if factor:
-		pwm = np.exp(pwm*factor)
-	norm = np.outer(np.ones(pwm.shape[0]), np.sum(np.abs(pwm), axis=0))
-	return pwm/norm
+    if not max:
+        max = np.max(np.abs(pwm))
+    pwm = pwm/max
+    if factor:
+        pwm = np.exp(pwm*factor)
+    norm = np.outer(np.ones(pwm.shape[0]), np.sum(np.abs(pwm), axis=0))
+    return pwm/norm

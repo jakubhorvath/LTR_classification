@@ -13,12 +13,18 @@ import Bio.SeqIO as SeqIO
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from sklearn.ensemble import RandomForestClassifier
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--input_features', help='Path to input features csv file')
+parser.add_argument('--seq_file', help='Path to sequence file')
+parser.add_argument('--out_path', help='Path to output file')
+args = parser.parse_args()
+
+LTR_dt = pd.read_csv(args.input_features, index_col=0)
 
 
-LTR_dt = pd.read_csv("/var/tmp/xhorvat9/ltr_bert/Simple_ML_model/LTR_motif_counts.csv", index_col=0)
-
-
-records = [rec for rec in SeqIO.parse("/var/tmp/xhorvat9/ltr_bert/FASTA_files/train_LTRs.fasta", "fasta")]
+records = [rec for rec in SeqIO.parse(args.seq_file, "fasta")]
 superfamilies = [rec.description.split()[3] for rec in records]
 IDs = [rec.id for rec in records]
 superfam_df = pd.DataFrame({ "superfamily": superfamilies}, index=IDs)

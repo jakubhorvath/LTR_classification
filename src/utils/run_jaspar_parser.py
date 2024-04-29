@@ -3,6 +3,7 @@ import pickle
 from Bio import motifs
 import sys
 import tqdm
+import argparse
 def get_motifs_list(motifs_file):
     """
     Returns array containing Bio.motifs.jaspar.Motif objects
@@ -67,14 +68,18 @@ if len(sys.argv) < 4:
     print("Usage: python run_jaspar_parser.py <jaspar_file> <sequence_file> <output_file>")
     sys.exit(1)
     
-jaspar_file = sys.argv[1]
-#jaspar_file = "/storage/brno2/home/xhorvat9/Diplomovka_DBs/JASPAR_Profiles/All_Profiles_JASPAR.jaspar"
+parser = argparse.ArgumentParser()
+parser.add_argument('--jaspar_file', help='Path to jaspar db')
+parser.add_argument('--seq_file', help='Path to sequence file')
+parser.add_argument('--out_file', help='Path to out directory')
+args = parser.parse_args()
+
+jaspar_file = args.jaspar_file
 motifs = get_motifs_list(jaspar_file)
-#seq_file = f"/storage/brno2/home/xhorvat9/ltr-annotator/Diplomovka_Final/1_Database_build/Negative_train_sequences/Negative_sequence_generation/all_length_non_LTRs_withMarkov{seq_num}.fasta"
-seq_file = sys.argv[2]
+seq_file = args.seq_file
 seq_motif_list = {}
 
 for rec in tqdm.tqdm(SeqIO.parse(seq_file, "fasta")):
     seq_motif_list[rec.id] = get_position_vector(rec.seq, motifs)
-outfile = sys.argv[3]
-pickle.dump(seq_motif_list, open(f"/var/tmp/xhorvat9/ltr_bert/Simple_ML_model/{outfile}", "wb+"))
+outfile = args.out_file
+pickle.dump(seq_motif_list, open(f"{outfile}/TFBS_occurences.b", "wb+"))
