@@ -52,8 +52,6 @@ while index < len(tv):
     print(index)
 attentions.shape #(layer, batch_size (squeezed by torch.cat), num_heads, sequence_length, sequence_length)
 
-import pickle
-#pickle.dump(attentions, open("LTR_BERT_attentions.pkl", "wb"))
 # Normalize the attentions and output to file
 first_layer = attentions[0, :, :, :, :]
 kmer=6

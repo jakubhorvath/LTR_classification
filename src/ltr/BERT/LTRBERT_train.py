@@ -2,7 +2,6 @@ import torch
 import random
 from transformers import BertTokenizer, BertForSequenceClassification
 import Bio.SeqIO as SeqIO
-from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 import numpy as np
 from huggingface_hub import interpreter_login
@@ -13,8 +12,7 @@ import pandas as pd
 from transformers import Trainer, TrainingArguments
 import wandb
 from helper_functions import *
-import math
-import sys
+from utils.BERT_utils import *
 # Load the tokenizer and model
 kmer = "6"
 
@@ -29,13 +27,11 @@ else:
     device = torch.device("cpu")
 model.to(device)
 
-def Kmers_funct(seq, size=6, stride=1):
-   return [seq[x:x+size].upper() for x in range(0, len(seq) - size + 2, stride)]
-def tok_func(x, size=6, stride=1): return " ".join(Kmers_funct(x.replace("N", ""), size=size, stride=stride))
 
 MAX_LEN=512
 STRIDE_SIZE=1
 
+# Load the sequences and subsample
 LTRs = [rec for rec in SeqIO.parse("/var/tmp/xhorvat9/ltr_bert/FASTA_files/train_LTRs.fasta", "fasta") if len(rec.seq) < MAX_LEN and len(rec.seq) > 0]
 
 n_sequences = len(LTRs)
@@ -66,21 +62,6 @@ validation_IDs = [rec.id for rec in valX]
 valX = [str(rec.seq) for rec in valX]
 
 # Create torch dataset
-class Dataset(torch.utils.data.Dataset):
-    def __init__(self, encodings, labels=None):
-        self.encodings = encodings
-        self.labels = labels
-
-    def __getitem__(self, idx):
-        item = {key: torch.tensor(val[idx]) for key, val in self.encodings.items()}
-        if self.labels:
-            item["labels"] = torch.tensor(self.labels[idx])
-        return item
-
-    def __len__(self):
-        return len(self.encodings["input_ids"])
-
-
 wandb.login()
 
 wandb.init("LTRBERT_LTR_final_train")
@@ -129,7 +110,6 @@ trainer.train()
 
 # save the trained model to the huggingface hub
 trainer.save_model("LTRBERT_LTR_classifier_512")
-#trainer.push_to_hub("LTRBERT_LTR_classifier_512")
 
 wandb.finish()
 # Tokenize test data

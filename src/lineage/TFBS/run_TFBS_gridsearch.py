@@ -13,31 +13,20 @@ import Bio.SeqIO as SeqIO
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from sklearn.ensemble import RandomForestClassifier
-
-def get_presence_count_dict(motif_dict_count, motif_dict_presence, TF_sites):
-    for seq in TF_sites:
-        for motif in motif_dict_count:
-            if len(TF_sites[seq][motif]) > 0:
-                motif_dict_count[motif].append(len(TF_sites[seq][motif]))
-                motif_dict_presence[motif].append(1)
-            else:
-                motif_dict_count[motif].append(0)
-                motif_dict_presence[motif].append(0)
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+from utils.TFBS_utils import get_presence_count_dict
 
 n_classes = 15
 motifs = pickle.load(open("/var/tmp/xhorvat9/ltr_bert/Simple_ML_model/training_LTR_TFBS_old638.b", "rb"))
 
-#motifs = pickle.load(open("/var/tmp/xhorvat9/ltr_bert/Simple_ML_model/sequence_motifs_sampled.b", "rb"))
-#LTR_dt = pd.read_csv("/var/tmp/xhorvat9/ltr_bert/Simple_ML_model/LTR_motif_counts.csv", index_col=0)
 LTR_motif_dict_count = dict([(key, []) for key in motifs[list(motifs.keys())[0]]])
 LTR_motif_dict_presence = dict([(key, []) for key in motifs[list(motifs.keys())[0]]])
 get_presence_count_dict(LTR_motif_dict_count, LTR_motif_dict_presence, motifs)
 
-import pandas as pd
 IDs = list(motifs.keys())
 dt = pd.DataFrame(LTR_motif_dict_count, index=IDs)
 
-import Bio.SeqIO as SeqIO
 records = [rec for rec in SeqIO.parse("/var/tmp/xhorvat9/ltr_bert/FASTA_files/train_LTRs.fasta", "fasta")]
 rec_ids = [rec.id for rec in records]
 rec_lineages = [rec.description.split()[4] for rec in records]
@@ -49,9 +38,6 @@ d = dt.join(lineage_df, how="inner")
 
 d = d[~d['lineage'].str.contains("copia")]
 d = d[d["lineage"].isin(d["lineage"].value_counts()[:n_classes].index.tolist())]
-
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
 
 label_encoder = LabelEncoder()
 labels = label_encoder.fit_transform(d['lineage'])

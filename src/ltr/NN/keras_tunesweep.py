@@ -115,10 +115,9 @@ def train():
     model2.add(MaxPooling1D(pool_size=config.pool_size))
     model2.add(LSTM(config.lstm_units))
     model2.add(Dense(units=1, activation='sigmoid'))
-
     model2.compile(loss='binary_crossentropy', optimizer=config.optimizer, metrics=['binary_accuracy'], weighted_metrics=["binary_accuracy"])
 
-    #model2.fit(valX, np.array(valY), epochs=3, batch_size=64,verbose = 1,validation_data=(valX, np.array(valY)), callbacks=[WandbCallback()])
+    # train the model
     model2.fit(trainX, np.array(trainY), epochs=15, batch_size=64,verbose = 1,validation_data=(valX, np.array(valY)), callbacks=[EarlyStopping(monitor='val_loss', patience=3), WandbCallback(validation_data=(valX, valY))], class_weight=weights)
 
 wandb.agent(sweep_id, train)
