@@ -6,7 +6,6 @@ from sklearn.feature_extraction.text import TfidfTransformer
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.neural_network import MLPClassifier
 import pickle
-import random
 from sklearn.metrics import accuracy_score, f1_score
 import pandas as pd
 import Bio.SeqIO as SeqIO
@@ -16,9 +15,15 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from utils.TFBS_utils import get_presence_count_dict
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--LTR_motifs', help='Path to the motifs pickle')
+parser.add_argument('--LTR_seq_file', help='Path to LTR fasta file')
+args = parser.parse_args()
 
 n_classes = 15
-motifs = pickle.load(open("/var/tmp/xhorvat9/ltr_bert/Simple_ML_model/training_LTR_TFBS_old638.b", "rb"))
+motifs = pickle.load(open(args.LTR_motifs, "rb"))
 
 LTR_motif_dict_count = dict([(key, []) for key in motifs[list(motifs.keys())[0]]])
 LTR_motif_dict_presence = dict([(key, []) for key in motifs[list(motifs.keys())[0]]])
@@ -27,7 +32,7 @@ get_presence_count_dict(LTR_motif_dict_count, LTR_motif_dict_presence, motifs)
 IDs = list(motifs.keys())
 dt = pd.DataFrame(LTR_motif_dict_count, index=IDs)
 
-records = [rec for rec in SeqIO.parse("/var/tmp/xhorvat9/ltr_bert/FASTA_files/train_LTRs.fasta", "fasta")]
+records = [rec for rec in SeqIO.parse(args.LTR_seq_file, "fasta")]
 rec_ids = [rec.id for rec in records]
 rec_lineages = [rec.description.split()[4] for rec in records]
 
@@ -41,7 +46,7 @@ d = d[d["lineage"].isin(d["lineage"].value_counts()[:n_classes].index.tolist())]
 
 label_encoder = LabelEncoder()
 labels = label_encoder.fit_transform(d['lineage'])
-pickle.dump(label_encoder, open("/var/tmp/xhorvat9/ltr_bert/NewClassifiers/Lineage/TFBS/label_encoder.b", "wb+"))
+pickle.dump(label_encoder, open("label_encoder.b", "wb+"))
 
 trainX, valX, trainY, valY = train_test_split(d.drop("lineage", axis=1), labels, test_size=0.2, random_state=42)
 

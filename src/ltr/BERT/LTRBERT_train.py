@@ -13,6 +13,13 @@ from transformers import Trainer, TrainingArguments
 import wandb
 from helper_functions import *
 from utils.BERT_utils import *
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--LTR_seq_file', help='Path to LTR fasta file')
+parser.add_argument('--non_LTR_seq_file', help='Path to nonLTR fasta file')
+args = parser.parse_args()
+
 # Load the tokenizer and model
 kmer = "6"
 
@@ -32,22 +39,10 @@ MAX_LEN=512
 STRIDE_SIZE=1
 
 # Load the sequences and subsample
-LTRs = [rec for rec in SeqIO.parse("/var/tmp/xhorvat9/ltr_bert/FASTA_files/train_LTRs.fasta", "fasta") if len(rec.seq) < MAX_LEN and len(rec.seq) > 0]
-
+LTRs = [rec for rec in SeqIO.parse(args.LTR_seq_file, "fasta") if len(rec.seq) < MAX_LEN and len(rec.seq) > 0]
 n_sequences = len(LTRs)
 
-generated, genomic, markov = int(n_sequences*0.15), int(n_sequences*0.6), int(n_sequences*0.25)
-
-genomic_non_LTRs = [rec for rec in SeqIO.parse("/var/tmp/xhorvat9/ltr_bert/FASTA_files/non_LTRs_training_genomic_extracts.fasta", "fasta") if len(rec.seq) < MAX_LEN and len(rec.seq) > 0]
-if genomic < len(genomic_non_LTRs):
-    genomic_non_LTRs = random.sample(genomic_non_LTRs, genomic)
-generated_non_LTRs = [rec for rec in SeqIO.parse("/var/tmp/xhorvat9/ltr_bert/FASTA_files/non_LTRs_training_generated.fasta", "fasta") if len(rec.seq) < MAX_LEN and len(rec.seq) > 0]
-if generated < len(generated_non_LTRs):
-    generated_non_LTRs = random.sample(generated_non_LTRs, generated)
-markov_non_LTRs = [rec for rec in SeqIO.parse("/var/tmp/xhorvat9/ltr_bert/FASTA_files/non_LTRs_training_markovChain.fasta", "fasta") if len(rec.seq) < MAX_LEN and len(rec.seq) > 0]
-if markov < len(markov_non_LTRs):
-    markov_non_LTRs = random.sample(markov_non_LTRs, markov)
-non_LTRs = genomic_non_LTRs + generated_non_LTRs + markov_non_LTRs
+non_LTRs = [rec for rec in SeqIO.parse(args.non_LTR_seq_file, "fasta") if len(rec.seq) < MAX_LEN and len(rec.seq) > 0]
 
 records = non_LTRs + LTRs
 

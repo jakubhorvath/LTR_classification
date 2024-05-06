@@ -13,7 +13,11 @@ from transformers import Trainer, TrainingArguments
 import wandb
 import sys
 from utils.BERT_utils import * 
+import argparse
 
+parser = argparse.ArgumentParser()
+parser.add_argument('--seq_file', help='Path to sequence file')
+args = parser.parse_args()
 # Function to calculate the accuracy of our predictions vs labels
 def flat_accuracy(preds, labels):
     pred_flat = np.argmax(preds, axis=1).flatten()
@@ -35,7 +39,6 @@ def compute_metrics(p):
 MAX_LEN=510
 STRIDE_SIZE=1
 
-# Load the tokenizer and model
 kmer = "6"
 
 # Load the tokenizer and model
@@ -51,7 +54,7 @@ else:
 
 model.to(device)
 
-records  = [rec for rec in SeqIO.parse("/var/tmp/xhorvat9/ltr_bert/FASTA_files/train_LTRs.fasta", "fasta") if len(rec.seq) < MAX_LEN and len(rec.seq) > 0 and rec.description.split()[3] != "NAN"]
+records  = [rec for rec in SeqIO.parse(args.seq_file, "fasta") if len(rec.seq) < MAX_LEN and len(rec.seq) > 0 and rec.description.split()[3] != "NAN"]
 
 
 labels = [rec.description.split()[3] for rec in records]

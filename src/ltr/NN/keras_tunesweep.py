@@ -15,6 +15,13 @@ from sklearn.utils import class_weight
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 import wandb
 from wandb.keras import WandbCallback
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--model', help='Path to model')
+parser.add_argument('--LTR_seq_file', help='Path to LTR fasta file')
+parser.add_argument('--non_LTR_seq_file', help='Path to nonLTR fasta file')
+args = parser.parse_args()
 
 def remove_N(seq):
     """
@@ -33,21 +40,11 @@ def onehote(seq):
     return np.array(seq2)
 
 max_len=700
-LTRs = [rec for rec in SeqIO.parse("/var/tmp/xhorvat9/ltr_bert/FASTA_files/train_LTRs.fasta", "fasta") if len(rec.seq) < max_len]
+LTRs = [rec for rec in SeqIO.parse(args.LTR_seq_file, "fasta") if len(rec.seq) < max_len]
 n_sequences = len(LTRs)
+random.seed(42)
 
-generated, genomic, markov = int(n_sequences*0.15), int(n_sequences*0.6), int(n_sequences*0.25)
-
-genomic_non_LTRs = [rec for rec in SeqIO.parse("/var/tmp/xhorvat9/ltr_bert/FASTA_files/non_LTRs_training_genomic_extracts.fasta", "fasta") if len(rec.seq) < max_len and len(rec.seq) > 0]
-if genomic < len(genomic_non_LTRs):
-    genomic_non_LTRs = random.sample(genomic_non_LTRs, genomic)
-generated_non_LTRs = [rec for rec in SeqIO.parse("/var/tmp/xhorvat9/ltr_bert/FASTA_files/non_LTRs_training_generated.fasta", "fasta") if len(rec.seq) < max_len and len(rec.seq) > 0]
-if generated < len(generated_non_LTRs):
-    generated_non_LTRs = random.sample(generated_non_LTRs, generated)
-markov_non_LTRs = [rec for rec in SeqIO.parse("/var/tmp/xhorvat9/ltr_bert/FASTA_files/non_LTRs_training_markovChain.fasta", "fasta") if len(rec.seq) < max_len and len(rec.seq) > 0]
-if markov < len(markov_non_LTRs):
-    markov_non_LTRs = random.sample(markov_non_LTRs, markov)
-non_LTRs = genomic_non_LTRs + generated_non_LTRs + markov_non_LTRs
+non_LTRs = [rec for rec in SeqIO.parse(args.non_LTR_seq_file, "fasta") if len(rec.seq) < max_len and len(rec.seq) > 0]
 
 
 sequences = [onehote(remove_N(str(rec.seq))) for rec in tqdm.tqdm(non_LTRs+LTRs)]

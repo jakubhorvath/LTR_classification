@@ -2,12 +2,16 @@ import torch
 import shap
 import transformers
 import torch
-import numpy as np
-import scipy as sp
 import random 
-from transformers import BertTokenizer, BertForSequenceClassification, AdamW
+from transformers import BertTokenizer, BertForSequenceClassification
 from utils import BERT_utils
 import Bio.SeqIO as SeqIO 
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--model', help='Path to the model')
+parser.add_argument('--LTR_seq_file', help='Path to LTR fasta file')
+args = parser.parse_args()
 
 if torch.cuda.is_available():     
     device = torch.device("cuda")
@@ -20,7 +24,7 @@ device = "cpu"
 LTR_sequences = []
 
 # Remove TSDs to prevent SHAP attributing high values and ignore other parts of sequence
-LTR_sequences = [str(rec.seq)[3:-3] for rec in SeqIO.parse("/data/xhorvat9/ltr_bert/FASTA_files/test_LTRs.fasta", "fasta")]
+LTR_sequences = [str(rec.seq)[3:-3] for rec in SeqIO.parse(args.LTR_seq_file, "fasta")]
 LTR_sequences = [s for s in LTR_sequences if len(s) < 512]
 
 random.seed(42)
@@ -28,7 +32,7 @@ LTR_sequences = random.sample(LTR_sequences, 3000)
 
 
 tokenizer = BertTokenizer.from_pretrained('zhihan1996/DNA_bert_6')
-m = BertForSequenceClassification.from_pretrained("/data/xhorvat9/ltr_bert/NewClassifiers/Lineage/BERT/LTRBERT_lineage_512", num_labels=15)
+m = BertForSequenceClassification.from_pretrained(args.model, num_labels=15)
 
 m = m.to(device)
 

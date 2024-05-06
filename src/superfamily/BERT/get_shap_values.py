@@ -8,6 +8,12 @@ from transformers import BertTokenizer, BertForSequenceClassification, AdamW
 import Bio.SeqIO as SeqIO
 import pickle
 import random
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--model', help='Path to model drectory')
+parser.add_argument('--seq_file', help='Path to sequence')
+args = parser.parse_args()
 
 if torch.cuda.is_available():    
 
@@ -29,7 +35,7 @@ def tok_func(x): return " ".join(Kmers_funct(x))
 
 # load a BERT sentiment analysis model
 tokenizer = BertTokenizer.from_pretrained('zhihan1996/DNA_bert_6')
-model = BertForSequenceClassification.from_pretrained("/data/xhorvat9/ltr_bert/NewClassifiers/Superfamily/BERT/LTRBERT_superfamily_512")
+model = BertForSequenceClassification.from_pretrained(args.model)
 model = model.to(device)
 
 def f(x):
@@ -44,7 +50,7 @@ def f(x):
     return val
 
 MAX_LEN=512
-records  = [rec for rec in SeqIO.parse("/data/xhorvat9/ltr_bert/FASTA_files/test_LTRs.fasta", "fasta") if len(rec.seq) < MAX_LEN and len(rec.seq) > 0]
+records  = [rec for rec in SeqIO.parse(args.seq_file, "fasta") if len(rec.seq) < MAX_LEN and len(rec.seq) > 0]
 LTR_sequences = [str(rec.seq) for rec in records]
 
 records = LTR_sequences #+ non_LTRs

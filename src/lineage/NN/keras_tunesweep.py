@@ -1,43 +1,29 @@
-import keras
-import keras_tuner as kt
 import tensorflow as tf
 import Bio.SeqIO as SeqIO
-import random
 import numpy as np
-import sys
 import pandas as pd
 import tqdm
 from keras.models import Sequential 
-from keras.layers import Dense, Conv1D, MaxPooling1D, Flatten, LSTM, Dropout, Bidirectional, BatchNormalization
+from keras.layers import Dense, Conv1D, MaxPooling1D, LSTM, Dropout
 from keras.callbacks import EarlyStopping
 from sklearn.model_selection import train_test_split
 from sklearn.utils import class_weight
-from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+from sklearn.preprocessing import LabelEncoder
 import wandb
 from wandb.keras import WandbCallback
+from utils.CNN_utils import remove_N, onehote
+import argparse 
 
-def remove_N(seq):
-    """
-    Remove Ns from sequence
-    """
-    return seq.upper().replace("N", "")
+parser = argparse.ArgumentParser()
+parser.add_argument('--LTR_fasta_file', help='Path to LTR fasta file')
+args = parser.parse_args()
 
-def onehote(seq):
-    """
-    One Hot encoding function
-    """
-    seq2=list()
-    mapping = {"A":[1., 0., 0., 0.], "C": [0., 1., 0., 0.], "G": [0, 0., 1., 0.], "T":[0., 0., 0., 1.], "N":[0., 0., 0., 0.]}
-    for i in seq:
-      seq2.append(mapping[i]  if i in mapping.keys() else [0., 0., 0., 0.]) 
-    return np.array(seq2)
-
-MAX_LEN=700
+MAX_LEN=4000
 MIN_LEN=0
 n_classes = 15
 
 # Load the sequences
-LTRs = [rec for rec in SeqIO.parse("/var/tmp/xhorvat9/ltr_bert/FASTA_files/train_LTRs.fasta", "fasta") if len(rec.seq) < MAX_LEN+500 and len(rec.seq) > MIN_LEN]
+LTRs = [rec for rec in SeqIO.parse(args.LTR_fasta_file, "fasta") if len(rec.seq) < MAX_LEN and len(rec.seq) > MIN_LEN]
 n_sequences = len(LTRs)
 
 # Filter the data
@@ -117,8 +103,6 @@ def train():
     model2.add(Dense(units=n_classes, activation='softmax'))
 
     model2.compile(loss='sparse_categorical_crossentropy', optimizer=config.optimizer, metrics=['sparse_categorical_accuracy'], weighted_metrics=["sparse_categorical_accuracy"])
-
-    #model2.fit(valX, np.array(valY), epochs=3, batch_size=64,verbose = 1,validation_data=(valX, np.array(valY)), callbacks=[WandbCallback()])
     model2.fit(trainX, trainY, epochs=15, batch_size=64,verbose = 1,validation_data=(valX, valY), callbacks=[EarlyStopping(monitor='val_loss', patience=3), WandbCallback(validation_data=(valX, valY))], class_weight=weights)
 
 wandb.agent(sweep_id, train)

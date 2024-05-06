@@ -13,12 +13,17 @@ import tqdm
 import pandas as pd
 from utils import BERT_utils
 import Bio.SeqIO as SeqIO
-from sklearn.model_selection import train_test_split
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--model', help='Path to the model')
+parser.add_argument('--LTR_seq_file', help='Path to LTR fasta file')
+args = parser.parse_args()
 
 # Load the tokenizer and model
 n_classes = 15
 tokenizer = BertTokenizer.from_pretrained('zhihan1996/DNA_bert_6')
-model = BertForSequenceClassification.from_pretrained('./LTRBERT_lineage_512', num_labels=n_classes)
+model = BertForSequenceClassification.from_pretrained(args.model, num_labels=n_classes)
 
 # Check if a GPU is available and if so, use it
 if torch.cuda.is_available():    
@@ -32,11 +37,11 @@ model.to(device)
 max_len = 512
 
 # Load the LTR sequences
-LTRs  = [rec for rec in SeqIO.parse("/data/xhorvat9/ltr_bert/FASTA_files/train_LTRs.fasta", "fasta") if len(rec.seq) >= max_len and len(rec.seq) > 0]
+LTRs  = [rec for rec in SeqIO.parse(args.LTR_seq_file, "fasta") if len(rec.seq) >= max_len and len(rec.seq) > 0]
 d = pd.DataFrame({'sequence':[str(rec.seq) for rec in LTRs], 'label':[rec.description.split(" ")[4] for rec in LTRs], 'seq_id':[rec.id for rec in LTRs]})
 
 # Encode the labels
-label_encoder = pickle.load(open("/data/xhorvat9/ltr_bert/NewClassifiers/Lineage/label_encoder.b", "rb"))
+label_encoder = pickle.load(open("label_encoder.b", "rb"))
 d = d[~d['label'].str.contains("copia")]
 d = d[d["label"].isin(label_encoder.classes_)]
 labels = list(label_encoder.transform(d["label"]))
@@ -80,5 +85,5 @@ for emb in tqdm.tqdm(model_embeddings):
     averaged.append((sum(emb)/len(emb)).numpy())
 averaged = np.array(averaged)
 
-pickle.dump((averaged, labels, d["seq_id"].tolist()), open("/data/xhorvat9/ltr_bert/NewClassifiers/Lineage/BERT/LTRBERT_superfamily_classifier_embeddings.b_average", "wb"))
+pickle.dump((averaged, labels, d["seq_id"].tolist()), open("LTRBERT_superfamily_classifier_embeddings.b_average", "wb"))
 

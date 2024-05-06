@@ -3,12 +3,19 @@ import pandas as pd
 import Bio.SeqIO as SeqIO
 import shap
 from utils.TFBS_utils import get_presence_count_dict
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--pipeline', help='Path to the GBC pipeline')
+parser.add_argument('--LTR_motifs', help='Path to the motifs pickle')
+parser.add_argument('--LTR_seq_file', help='Path to LTR fasta file')
+args = parser.parse_args()
 
 # Load the trained GBC pipeline and extract vectorizer and classifier
-pipeline = pickle.load(open('/data/xhorvat9/ltr_bert/NewClassifiers/Lineage/TFBS/GBC_pipeline.b', 'rb'))
+pipeline = pickle.load(open(args.pipeline, 'rb'))
 TFIDF_transformer = pipeline["transformer"]
 GBC = pipeline["classifier"]
-test_features = pickle.load(open("/data/xhorvat9/ltr_bert/Simple_ML_model/test_LTR_TFBS_old638.b", "rb"))
+test_features = pickle.load(open(args.LTR_motifs, "rb"))
 
 # Load features into a dictionary
 LTR_motif_dict_count = dict([(key, []) for key in test_features[list(test_features.keys())[0]]])
@@ -20,7 +27,7 @@ IDs = list(test_features.keys())
 dt = pd.DataFrame(LTR_motif_dict_count, index=IDs)
 
 # Load the corresponding lineages
-records = [rec for rec in SeqIO.parse("/data/xhorvat9/ltr_bert/FASTA_files/train_LTRs.fasta", "fasta")]
+records = [rec for rec in SeqIO.parse(args.LTR_seq_file, "fasta")]
 rec_ids = [rec.id for rec in records]
 
 
@@ -34,7 +41,7 @@ data = data[data["lineage"].isin(data["lineage"].value_counts()[:n_classes].inde
 
 # Load the label encoder and transform the labels
 labels = data["lineage"]
-label_encoder = pickle.load(open("/data/xhorvat9/ltr_bert/NewClassifiers/Lineage/label_encoder.b", "rb"))
+label_encoder = pickle.load(open("label_encoder.b", "rb"))
 labels = label_encoder.transform(data['lineage'])
 data = data.iloc[:, :-1]
 

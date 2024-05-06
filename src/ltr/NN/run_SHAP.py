@@ -5,29 +5,31 @@ import random
 import tqdm
 import numpy as np
 import shap
-from shap import DeepExplainer
 import pickle
-#tf.compat.v1.disable_v2_behavior()
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--model', help='Path to model')
+parser.add_argument('--LTR_seq_file', help='Path to LTR fasta file')
+parser.add_argument('--non_LTR_seq_file', help='Path to nonLTR fasta file')
+args = parser.parse_args()
+
 tf.compat.v1.disable_eager_execution()
-#tf.compat.v1.experimental.output_all_intermediates(False)
 import os
-model = tf.keras.models.load_model("/data/xhorvat9/ltr_bert/NewClassifiers/LTR_classifier/NN/all_length_cnn_lstm_for_SHAP.h5")
-#short_model = tf.keras.models.load_model('/data/xhorvat9/ltr_bert/NewClassifiers/LTR_classifier/NN/short_seq_cnn_lstm.h5')
+model = tf.keras.models.load_model(args.model)
 from utils.CNN_utils import remove_N, onehote
 import numpy as np
 
 MAX_LEN=4000
 MIN_LEN=0
 random.seed(10)
-LTRs = [rec for rec in SeqIO.parse("/data/xhorvat9/ltr_bert/FASTA_files/test_LTRs.fasta", "fasta") if len(rec.seq) < MAX_LEN and len(rec.seq) > MIN_LEN]
-non_LTRs = [rec for rec in SeqIO.parse("/data/xhorvat9/ltr_bert/FASTA_files/non_LTRs_test.fasta", "fasta") if len(rec.seq) < MAX_LEN and len(rec.seq) > MIN_LEN]
+LTRs = [rec for rec in SeqIO.parse(args.LTR_seq_file, "fasta") if len(rec.seq) < MAX_LEN and len(rec.seq) > MIN_LEN]
+non_LTRs = [rec for rec in SeqIO.parse(args.non_LTR_seq_file, "fasta") if len(rec.seq) < MAX_LEN and len(rec.seq) > MIN_LEN]
 LTRs = random.sample(LTRs, 20000)
 non_LTRs = random.sample(non_LTRs, 20000)
 
 
 sequences = [onehote(remove_N(str(rec.seq))) for rec in tqdm.tqdm(LTRs+non_LTRs)]
-
-
 LTRs = random.sample(LTRs, 3000)
 non_LTRs = random.sample(non_LTRs, 3000)
 train_seqs = [onehote(remove_N(str(rec.seq))) for rec in tqdm.tqdm(LTRs+non_LTRs)]
@@ -36,8 +38,6 @@ training_padded = tf.keras.preprocessing.sequence.pad_sequences(train_seqs, padd
 # Split into train and test
 paddedDNA = tf.keras.preprocessing.sequence.pad_sequences(sequences, padding="pre", maxlen=3000)
 
-
-#tf.compat.v1.disable_v2_behavior()
 np.random.seed(1)
 n=10
 

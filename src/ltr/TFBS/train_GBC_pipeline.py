@@ -1,22 +1,24 @@
 import pandas as pd
-from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import TfidfTransformer
 from sklearn.ensemble import GradientBoostingClassifier
-from sklearn.neural_network import MLPClassifier
 import pickle
 import random
 from sklearn.metrics import accuracy_score, f1_score
 import pandas as pd
 import Bio.SeqIO as SeqIO
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
-from sklearn.ensemble import RandomForestClassifier
 from utils.TFBS_utils import get_presence_count_dict
+import argparse
 
-LTR_motifs = pickle.load(open("/var/tmp/xhorvat9/ltr_bert/Simple_ML_model/training_LTR_TFBS_old638.b", "rb"))
-non_LTR_motifs = pickle.load(open("/var/tmp/xhorvat9/ltr_bert/Simple_ML_model/training_non_LTR_TFBS_long.b", "rb"))
+parser = argparse.ArgumentParser()
+parser.add_argument('--LTR_motifs', help='Path to LTR motifs ')
+parser.add_argument('--non_LTR_motifs', help='Path to non_LTR motifs')
+args = parser.parse_args()
+
+LTR_motifs = pickle.load(open(args.LTR_motifs, "rb"))
+non_LTR_motifs = pickle.load(open(args.non_LTR_motifs, "rb"))
 
 # Load the motifs for LTR and non-LTR sequences
 LTR_motif_dict_count = dict([(key, []) for key in LTR_motifs[list(LTR_motifs.keys())[0]]])

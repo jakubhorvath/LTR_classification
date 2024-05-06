@@ -11,9 +11,13 @@ from sklearn.metrics import balanced_accuracy_score, recall_score, precision_sco
 import pandas as pd
 from transformers import Trainer, TrainingArguments
 import wandb
-import sys
-import random
 from utils import BERT_utils
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--model', help='Path to the model')
+parser.add_argument('--LTR_seq_file', help='Path to LTR fasta file')
+args = parser.parse_args()
 
 
 # Function to calculate the accuracy of our predictions vs labels
@@ -51,7 +55,7 @@ else:
     device = torch.device("cpu")
 model.to(device)
 
-LTRs = [rec for rec in SeqIO.parse("/var/tmp/xhorvat9/ltr_bert/FASTA_files/train_LTRs.fasta", "fasta") if len(rec.seq) < MAX_LEN and len(rec.seq) > 0]
+LTRs = [rec for rec in SeqIO.parse(args.LTR_seq_file, "fasta") if len(rec.seq) < MAX_LEN and len(rec.seq) > 0]
 
 n_sequences = len(LTRs)
 
@@ -107,5 +111,3 @@ wandb.finish()
 test_trainer = Trainer(model) # Make prediction
 raw_pred, _, _ = test_trainer.predict(val_dataset) # Preprocess raw predictions
 y_pred = np.argmax(raw_pred, axis=1)
-
-pd.DataFrame({"ID": validation_IDs, "prediction": y_pred, "actual": valY}).to_csv("LTRBERT_lineage_validation_predictions.csv", index=False)

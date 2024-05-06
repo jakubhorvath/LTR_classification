@@ -4,6 +4,13 @@ import Bio.SeqIO as SeqIO
 import random
 import seaborn as sns
 import numpy as np
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--model', help='Path to the model')
+parser.add_argument('--LTR_seq_file', help='Path to LTR fasta file')
+args = parser.parse_args()
+
 if torch.cuda.is_available():    
 
     # Tell PyTorch to use the GPU.    
@@ -20,7 +27,7 @@ device = "cpu"
 
 # load a BERT sentiment analysis model
 tokenizer = BertTokenizer.from_pretrained(f'zhihan1996/DNA_bert_6')
-model = BertForSequenceClassification.from_pretrained("/data/xhorvat9/ltr_bert/NewClassifiers/LTR_classifier/BERT/LTRBERT_LTR_classifier_512", num_labels=2, output_hidden_states=True, output_attentions=True)
+model = BertForSequenceClassification.from_pretrained(args.model, num_labels=2, output_hidden_states=True, output_attentions=True)
 model = model.to(device)
 
  # the kmer splitting function
@@ -31,7 +38,7 @@ def tok_func(x): return " ".join(Kmers_funct(x))
 max_len = 512
 random.seed(42)
 n_sequences = 1000
-records  = [rec for rec in SeqIO.parse("/data/xhorvat9/ltr_bert/FASTA_files/test_LTRs.fasta", "fasta") if len(rec.seq) < max_len and len(rec.seq) > 450]
+records  = [rec for rec in SeqIO.parse(args.LTR_seq_file, "fasta") if len(rec.seq) < max_len and len(rec.seq) > 450]
 LTR_sequences = random.sample([str(rec.seq) for rec in records],n_sequences)
 seqs = [tok_func(v) for v in LTR_sequences]
 tv = [tokenizer(s, padding='max_length', max_length=512, truncation=True, return_tensors='pt') for s in seqs]
