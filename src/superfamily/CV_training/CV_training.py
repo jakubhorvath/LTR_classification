@@ -10,19 +10,17 @@ from sklearn.feature_extraction.text import TfidfTransformer
 
 import tqdm
 import pickle
-from BERT_model import LTRBERT
-from CNN_model import Conv1DModel, CNN_dataset
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import StratifiedKFold, StratifiedGroupKFold
-
 from torch.utils.data import DataLoader
 import tqdm 
 from sklearn.metrics import balanced_accuracy_score, recall_score, precision_score, f1_score, matthews_corrcoef
 import torch
 from transformers import TrainingArguments, Trainer, EarlyStoppingCallback
 test_size = 0.001
-sys.path.append("/data/xhorvat9/LTR_classification/src")
+sys.path.append("/data")
 sys.path.append("../../")
+from utils.CNN_model import Conv1DModel, CNN_dataset
 from utils.BERT_utils import tok_func, Dataset
 from utils.CNN_utils import onehote
 import sys
@@ -151,9 +149,9 @@ class BERT_dataset(torch.utils.data.Dataset):
         return self.data[idx], self.target[idx]
 
 
-LTRs = [rec for rec in SeqIO.parse("/data/xhorvat9/LTR_classification_data/Sequence_files/train_LTRs.fasta", "fasta") if rec.description.split()[3] != "NAN"]
+LTRs = [rec for rec in SeqIO.parse("Sequence_files/train_LTRs.fasta", "fasta") if rec.description.split()[3] != "NAN"]
 
-LTR_motifs = pd.read_csv("/data/xhorvat9/LTR_classification_data/TFBS/LTR_train_motifCounts.csv", sep="\t").set_index("ID")
+LTR_motifs = pd.read_csv("TFBS/LTR_train_motifCounts.csv", sep="\t").set_index("ID")
 
 # LTR ordering is identical to its motif representation
 LTR_sequence_df = pd.DataFrame({"sequence": [str(rec.seq) for rec in LTRs], "ID": [rec.id for rec in LTRs], "label": [rec.description.split()[3] for rec in LTRs]})
@@ -219,15 +217,17 @@ log_file = open("training_out2.log","w+")
 sys.stdout = log_file
 
 arr = np.arange(len(X_OHE))  # Example array
-splits = split_array_indices(arr, y)
+
+kf = StratifiedKFold(n_splits=6, shuffle=True, random_state=42)
+kf.get_n_splits(X, y)
+splits = kf.split(X, y)
 
 with tqdm.tqdm(range(5), unit="split") as tqdm_splits:
-    #for i, (train_index, test_index) in enumerate(split):
     for i, split in enumerate(splits):
-        train_index, test_index = train_test_split(split, test_size=0.2, random_state=42)
+
+        train_index, test_index = split
     
         # Train the BERT model
-    
         bert_model = transformers.BertForSequenceClassification.from_pretrained('zhihan1996/DNA_bert_6', num_labels=2)
 
         # Tokenize the short sequences
@@ -341,5 +341,4 @@ with tqdm.tqdm(range(5), unit="split") as tqdm_splits:
         print(f"CNN metrics: {CNN_metrics}")
         print(f"GBC metrics: {GBC_metrics}")
 
-
-    #TODO set all torch models to eval mode
+log_file.close()

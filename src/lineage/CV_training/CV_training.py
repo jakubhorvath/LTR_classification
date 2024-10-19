@@ -11,7 +11,7 @@ from sklearn.feature_extraction.text import TfidfTransformer
 import tqdm
 import pickle
 from BERT_model import LTRBERT
-from CNN_model import Conv1DModel, CNN_dataset
+
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import StratifiedKFold, StratifiedGroupKFold
 
@@ -21,11 +21,13 @@ from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_sc
 import torch
 from transformers import TrainingArguments, Trainer, EarlyStoppingCallback
 test_size = 0.001
-sys.path.append("/data/xhorvat9/LTR_classification/src")
+sys.path.append("/data")
 sys.path.append("../../")
+from utils.CNN_model import Conv1DModel, CNN_dataset
 from utils.BERT_utils import tok_func, Dataset
 from utils.CNN_utils import onehote
 import sys
+
 
 def get_embeddings(bert_model, long_sequences):
     min_len = 510
@@ -150,9 +152,9 @@ class BERT_dataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         return self.data[idx], self.target[idx]
 
-LTRs = [rec for rec in SeqIO.parse("/data/xhorvat9/LTR_classification_data/Sequence_files/train_LTRs.fasta", "fasta") if rec.description.split()[3] != "NAN"]
+LTRs = [rec for rec in SeqIO.parse("Sequence_files/train_LTRs.fasta", "fasta") if rec.description.split()[3] != "NAN"]
 
-LTR_motifs = pd.read_csv("/data/xhorvat9/LTR_classification_data/TFBS/LTR_train_motifCounts.csv", sep="\t").set_index("ID")
+LTR_motifs = pd.read_csv("TFBS/LTR_train_motifCounts.csv", sep="\t").set_index("ID")
 
 # LTR ordering is identical to its motif representation
 LTR_sequence_df = pd.DataFrame({"sequence": [str(rec.seq) for rec in LTRs], "ID": [rec.id for rec in LTRs], "label": [rec.description.split()[4] for rec in LTRs]})
@@ -161,7 +163,6 @@ LTR_sequence_df = LTR_sequence_df.merge(LTR_motifs, on="ID")[["sequence", "label
 LTR_sequence_df = LTR_sequence_df[LTR_sequence_df["label"].isin(list(LTR_sequence_df["label"].value_counts().iloc[:13].index))]
 X_motifs = LTR_sequence_df.merge(LTR_motifs, on="ID").drop(["sequence", "label"], axis= 1)
 print("Indices for LTR sequences and motifs are identical: ", all(X_motifs.index == LTR_sequence_df.index))
-
 
 
 X = np.array(LTR_sequence_df["sequence"].tolist())
@@ -189,8 +190,8 @@ tokenizer = transformers.BertTokenizer.from_pretrained('zhihan1996/DNA_bert_6')
 
 CNN_input_size = 4000
 
-#X_OHE = [onehote(x) for x in X]
-#X_OHE = np.array(X_OHE, dtype="object")
+X_OHE = [onehote(x) for x in X]
+X_OHE = np.array(X_OHE, dtype="object")
 
 kf = StratifiedKFold(n_splits=6, shuffle=True, random_state=42)
 kf.get_n_splits(X, y)
@@ -206,7 +207,6 @@ sys.stdout = log_file
 for i, (train_index, test_index) in enumerate(splits):
 
     # Train the BERT model
-
     bert_model = transformers.BertForSequenceClassification.from_pretrained('zhihan1996/DNA_bert_6', num_labels=13)
 
     # Tokenize the short sequences
@@ -243,7 +243,6 @@ for i, (train_index, test_index) in enumerate(splits):
     trainer.train()        
 
     # Run model on segments of long sequences
-
     averaged = get_embeddings(bert_model, BERT_train_X_long)
 
     pickle.dump(averaged, open(f"averaged_{i}.pkl", "wb"))
@@ -290,16 +289,14 @@ for i, (train_index, test_index) in enumerate(splits):
             loss.backward()
             CNN_optimizer.step()
 
-    
     GBC = GradientBoostingClassifier(max_depth=8, min_samples_leaf=50, n_estimators=400)
+
     # Train the GBC
     X_motifs_train, X_motifs_test = X_motifs[train_index], X_motifs[test_index]
     GBC.fit(X_motifs_train, train_y)
 
 
     # Test the trained classifiers 
-    #raw_pred, _, _ = trainer.predict(Dataset(tokenizer([tok_func(x) for x in BERT_test_X_short], padding=True, truncation=True, max_length=512), test_y_short))
-    #bert_short_predictions = np.argmax(raw_pred, axis=1)
     bert_short_predictions, _, _ = trainer.predict(Dataset(tokenizer([tok_func(x) for x in BERT_test_X_short], padding=True, truncation=True, max_length=512)))
     emb_model.eval()
     bert_long_predictions = emb_model(torch.tensor(get_embeddings(bert_model, BERT_test_X_long), dtype=torch.float).unsqueeze(1).cuda())

@@ -10,8 +10,7 @@ from sklearn.feature_extraction.text import TfidfTransformer
 
 import tqdm
 import pickle
-from BERT_model import LTRBERT
-from CNN_model import Conv1DModel, CNN_dataset
+
 
 from sklearn.model_selection import StratifiedKFold, StratifiedGroupKFold
 
@@ -20,9 +19,10 @@ import tqdm
 from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
 import torch
 from transformers import TrainingArguments, Trainer, EarlyStoppingCallback
-test_size = 0.1
-sys.path.append("/data/xhorvat9/LTR_classification/src")
+test_size = 0.001
+sys.path.append("/data")
 sys.path.append("../../")
+from CNN_model import Conv1DModel, CNN_dataset
 from utils.BERT_utils import tok_func, Dataset
 from utils.CNN_utils import onehote
 import sys
@@ -187,11 +187,11 @@ old_stdout = sys.stdout
 log_file = open("training_out.log","w+")
 
 sys.stdout = log_file
-LTRs = [rec for rec in SeqIO.parse("/data/xhorvat9/LTR_classification_data/Sequence_files/train_LTRs.fasta", "fasta")]
-nonLTRs = [rec for rec in SeqIO.parse("/data/xhorvat9/LTR_classification_data/Sequence_files/non_LTRs_training.fasta", "fasta")]
+LTRs = [rec for rec in SeqIO.parse("Sequence_files/train_LTRs.fasta", "fasta")]
+nonLTRs = [rec for rec in SeqIO.parse("Sequence_files/non_LTRs_training.fasta", "fasta")]
 
-LTR_motifs = pd.read_csv("/data/xhorvat9/LTR_classification_data/TFBS/LTR_train_motifCounts.csv", sep="\t").set_index("ID")
-non_LTR_motifs = pd.read_csv("/data/xhorvat9/LTR_classification_data/TFBS/non_LTR_train_motifCounts.csv", sep="\t").set_index("ID")
+LTR_motifs = pd.read_csv("TFBS/LTR_train_motifCounts.csv", sep="\t").set_index("ID")
+non_LTR_motifs = pd.read_csv("TFBS/non_LTR_train_motifCounts.csv", sep="\t").set_index("ID")
 
 
 # LTR ordering is identical to its motif representation
@@ -242,17 +242,19 @@ import random
 seed = 42
 np.random.seed(seed)
 arr = np.arange(len(X_OHE))  # Example array
-splits = split_array_indices(arr, 5)
 
-np.save("splits.npy", np.array(splits, dtype="object"))
+
+kf = StratifiedKFold(n_splits=6, shuffle=True, random_state=42)
+kf.get_n_splits(X, y)
+splits = kf.split(X, y)
+
+#np.save("splits.npy", np.array(splits, dtype="object"))
 
 
 with tqdm.tqdm(range(5), unit="split") as tqdm_splits:
     for i, split in enumerate(splits):
-        train_index, test_index = train_test_split(split, test_size=0.2, random_state=42)
-    
-    #for i, (train_index, test_index) in enumerate(split):
-        # Train the BERT model
+        train_index, test_index = split
+
     
         bert_model = transformers.BertForSequenceClassification.from_pretrained('zhihan1996/DNA_bert_6', num_labels=2)
 
@@ -305,9 +307,8 @@ with tqdm.tqdm(range(5), unit="split") as tqdm_splits:
                 batch_Y = torch.tensor(train_y_long[batch_index:batch_index+batch_size].reshape(-1, 1), dtype=torch.float)
 
                 outputs = emb_model(batch_X)  # PyTorch expects channels first, so we transpose
-                #????? should this be before or after running the model 
                 optimizer.zero_grad()
-                #test_y_long[batch_index:batch_index+batch_size].reshape(-1,1)
+
                 loss = criterion(outputs.cpu(), batch_Y)
                 loss.backward()
                 optimizer.step()
@@ -324,7 +325,7 @@ with tqdm.tqdm(range(5), unit="split") as tqdm_splits:
         # Train the CNN
         OHE_train_X, OHE_test_X  = X_OHE[train_index], X_OHE[test_index]
         batch_size = 256
-        # TODO may be overfitting
+        
         for epoch in range(10):
             for batch_index in range(0, len(OHE_train_X), batch_size):
                 batch_X = OHE_train_X[batch_index:batch_index+batch_size]
@@ -332,7 +333,6 @@ with tqdm.tqdm(range(5), unit="split") as tqdm_splits:
         
                 padded_batch_X = torch.tensor(np.array([pad_sequences(x.tolist(), 4000) for x in batch_X]), dtype=torch.float).permute(0, 2, 1).to("cuda")
                 outputs = CNN_model(padded_batch_X)  # PyTorch expects channels first, so we transpose
-                #????? should this be before or after running the model 
                 CNN_optimizer.zero_grad()
                 
                 loss = CNN_criterion(outputs, batch_Y.cuda())
@@ -353,7 +353,6 @@ with tqdm.tqdm(range(5), unit="split") as tqdm_splits:
         bert_long_predictions = emb_model(torch.tensor(get_embeddings(bert_model, BERT_test_X_long), dtype=torch.float).unsqueeze(1).cuda())
 
         CNN_model.eval()
-        # TODO might be the cause of memory issues here 
         padded_test_X = torch.tensor(np.array([pad_sequences(x.tolist(), 4000) for x in OHE_test_X]), dtype=torch.float).permute(0, 2, 1).to("cuda")
         CNN_predictions = CNN_model(padded_test_X)
         
